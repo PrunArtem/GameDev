@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using Animation;
 
 namespace Player
 {
@@ -8,9 +9,8 @@ namespace Player
     public class PlayerEntity : MonoBehaviour
     {        
         private Rigidbody2D _rigidBody;
-        [SerializeField] private Animator _animator;
 
-        private AnimationType _currentAnimationType;
+        [SerializeField] private AnimatorController _animatorController;
 
         [Header("HorizontalMovement")]
         [SerializeField] private float _horizontalSpeed;
@@ -20,6 +20,9 @@ namespace Player
         [Header("Jumping")]
         [SerializeField] private float _jumpForce;
 
+        [Header("Attacking")]
+        private bool _isAttacking;
+
         public void Jump()
         {
             Vector2 velocity = _rigidBody.velocity;
@@ -28,6 +31,27 @@ namespace Player
                 velocity.y = _jumpForce;
                 _rigidBody.velocity = velocity;
             }
+        }
+
+        public void StartAttack()
+        {
+            if (!_animatorController.PlayAnimation(AnimationType.Attack, true))
+                return;
+
+            _animatorController.ActionRequested += Attack;
+            _animatorController.AnimationEnded += EndAttack;
+        }
+
+        private void Attack()
+        {
+            Debug.Log("Attacked");
+        }
+
+        private void EndAttack()
+        {
+            _animatorController.ActionRequested -= Attack;
+            _animatorController.AnimationEnded -= EndAttack;
+            _animatorController.PlayAnimation(AnimationType.Attack, false);
         }
 
         public void MoveHorizontally(float direction)
@@ -52,35 +76,11 @@ namespace Player
             _faceRight = !_faceRight;
         }
 
-        private void PlayAnimation(AnimationType animationType, bool active)
-        {
-            if (!active)
-            {
-                if (_currentAnimationType == AnimationType.Idle || _currentAnimationType != animationType)
-                    return;
-
-                _currentAnimationType = AnimationType.Idle;
-                PlayAnimation(_currentAnimationType);
-                return;
-            }
-
-            if (_currentAnimationType >= animationType)
-                return;
-
-            _currentAnimationType = animationType;
-            PlayAnimation(_currentAnimationType);
-        }
-
-        private void PlayAnimation(AnimationType animationType)
-        {
-            _animator.SetInteger(nameof(AnimationType), (int)animationType);
-        }
-
         private void UpdateAnimations()
         {
-            PlayAnimation(AnimationType.Running, _movement.magnitude > 0);
-            PlayAnimation(AnimationType.Jump, _rigidBody.velocity.y > 0);
-            PlayAnimation(AnimationType.Fall, _rigidBody.velocity.y < 0);
+            _animatorController.PlayAnimation(AnimationType.Running, _movement.magnitude > 0);
+            _animatorController.PlayAnimation(AnimationType.Jump, _rigidBody.velocity.y > 0);
+            _animatorController.PlayAnimation(AnimationType.Fall, _rigidBody.velocity.y < 0);
         }
 
         private void Start()
